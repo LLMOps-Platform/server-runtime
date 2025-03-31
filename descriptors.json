@@ -1,0 +1,80 @@
+{
+  "web_server": {
+    "server_type": "web",
+    "port": 8080,
+    "environment": {
+      "FLASK_ENV": "production",
+      "API_SERVER": "http://localhost:8000"
+    },
+    "dependencies": [
+      "flask>=2.0.0",
+      "gunicorn>=20.1.0",
+      "requests>=2.27.1"
+    ]
+  },
+  "api_server": {
+    "server_type": "api",
+    "port": 8000,
+    "workers": 4,
+    "environment": {
+      "PYTHONPATH": "${PYTHONPATH}:${APP_DIR}",
+      "MODEL_CACHE_SIZE": "2",
+      "LOG_LEVEL": "INFO"
+    },
+    "dependencies": [
+      "fastapi>=0.68.0",
+      "uvicorn>=0.15.0",
+      "torch>=1.9.0",
+      "pillow>=8.3.1"
+    ]
+  },
+  "load_balancer": {
+    "server_type": "loadbalancer",
+    "port": 80,
+    "backend_servers": [
+      "192.168.1.101:8080",
+      "192.168.1.102:8080"
+    ],
+    "health_check": {
+      "path": "/health",
+      "interval": "5s",
+      "timeout": "3s",
+      "retries": 3
+    }
+  },
+  "database_server": {
+    "server_type": "database",
+    "db_type": "postgres",
+    "db_name": "llm_platform",
+    "db_user": "postgres",
+    "db_password": "secure_password",
+    "port": 5432,
+    "max_connections": 100,
+    "environment": {
+      "PGDATA": "${APP_DIR}/pgdata"
+    }
+  },
+  "monitoring_server": {
+    "server_type": "monitoring",
+    "monitoring_type": "prometheus",
+    "port": 9090,
+    "start_grafana": true,
+    "grafana_port": 3000,
+    "targets": [
+      "192.168.1.101:8080",
+      "192.168.1.102:8080",
+      "192.168.1.103:8000",
+      "192.168.1.104:8000"
+    ],
+    "alert_rules": {
+      "high_latency": {
+        "threshold": "0.5s",
+        "duration": "5m"
+      },
+      "error_rate": {
+        "threshold": "5%",
+        "duration": "1m"
+      }
+    }
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "name": "OCR Application",
+  "version": "1.0.0",
+  "description": "Optical Character Recognition application for digit recognition",
+  "author": "LLM Ops Team",
+  "created_at": "2025-03-31T12:00:00Z",
+  "components": {
+    "web": {
+      "web_server": "flask",
+      "app_module": "web.app:app",
+      "static_dir": "static",
+      "templates_dir": "templates",
+      "requirements": "requirements-web.txt"
+    },
+    "api": {
+      "api_module": "api.main:app",
+      "framework": "fastapi",
+      "requirements": "requirements-api.txt"
+    },
+    "model": {
+      "model_path": "model/mnist_cnn.pt",
+      "model_type": "pytorch",
+      "input_shape": [
+        1,
+        28,
+        28
+      ],
+      "preprocessing": "model.preprocess:process_image",
+      "postprocessing": "model.postprocess:format_result"
+    }
+  },
+  "dependencies": {
+    "system": [
+      "python3",
+      "python3-pip",
+      "nginx"
+    ],
+    "python": "requirements.txt"
+  },
+  "resources": {
+    "min_memory": "2G",
+    "recommended_memory": "4G",
+    "min_cpu": "2",
+    "recommended_cpu": "4",
+    "gpu_support": true
+  },
+  "deployment": {
+    "supported_platforms": [
+      "linux"
+    ],
+    "environment_variables": {
+      "MODEL_PRECISION": "fp32",
+      "INFERENCE_BATCH_SIZE": "16",
+      "LOG_LEVEL": "INFO"
+    },
+    "ports": {
+      "web": 8080,
+      "api": 8000
+    }
+  }
+}
