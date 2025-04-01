@@ -38,7 +38,8 @@ class RepositoryServer:
         if dependencies:
             self.logger.info(f"Installing dependencies: {', '.join(dependencies)}")
             try:
-                subprocess.run(["pip", "install", "-q"] + dependencies, check=True)
+                subprocess.run(["python", "-m", "venv", "env"], cwd=self.app_dir)
+                subprocess.run(["env/bin/python", "-m", "pip", "install", "-q"] + dependencies, check=True, cwd=self.app_dir)
             except subprocess.CalledProcessError as e:
                 self.logger.error(f"Failed to install dependencies: {e}")
                 return False
@@ -55,7 +56,8 @@ class RepositoryServer:
 
         try:
             app_module = self.config.get("app_module", "app:app")
-            cmd = ["gunicorn", "-b", f"0.0.0.0:{port}", app_module]
+            cmd = ["env/bin/gunicorn", "-b", f"0.0.0.0:{port}", app_module]
+            # cmd = ["env/bin/python", "-m", "gunicorn", "-b", f"0.0.0.0:{port}", app_module]
 
             # Start the server as a subprocess
             self.logger.info(f"Executing: {' '.join(cmd)}")

@@ -38,7 +38,8 @@ class RegistryServer:
         if dependencies:
             self.logger.info(f"Installing dependencies: {', '.join(dependencies)}")
             try:
-                subprocess.run(["pip", "install", "-q"] + dependencies, check=True)
+                subprocess.run(["python", "-m", "venv", "env"], cwd=self.app_dir)
+                subprocess.run(["env/bin/python", "-m", "pip", "install", "-q"] + dependencies, check=True, cwd=self.app_dir)
             except subprocess.CalledProcessError as e:
                 self.logger.error(f"Failed to install dependencies: {e}")
                 return False
@@ -58,14 +59,15 @@ class RegistryServer:
             init = self.config.get("init_module", "app:init_db'").split(":")
             main_file = init[0]
             init_fn = init[1]
-            cmd = ["python", "-c", f"'import ${main_file}; ${init_fn}()"]
+            cmd = ["env/bin/python", "-c", f"'import {main_file}; {init_fn}()'"]
             try:
-                subprocess.run(cmd, check=True)
+                subprocess.run(cmd, check=True, cwd=self.app_dir)
             except subprocess.CalledProcessError as e:
                 self.logger.error(f"Unable to call init_module: {e}")
                 return -1
 
-            cmd = ["gunicorn", "-b", f"0.0.0.0:{port}", app_module]
+            cmd = ["env/bin/gunicorn", "-b", f"0.0.0.0:{port}", app_module]
+            # cmd = ["env/bin/python", "-m", "gunicorn", "-b", f"0.0.0.0:{port}", app_module]
 
             # Start the server as a subprocess
             self.logger.info(f"Executing: {' '.join(cmd)}")

@@ -5,11 +5,12 @@ import subprocess
 
 
 class WebAppServer:
-    def __init__(self, app_dir, inference_url):
+    def __init__(self, app_dir, port, inference_url):
         self.app_dir = app_dir
         self.config = self._load_config()
         self.server_name = self.__class__.__name__
         self.inference_url = inference_url
+        self.port = port
         logging.basicConfig(
             level=logging.INFO,
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -49,8 +50,6 @@ class WebAppServer:
         for key, value in self.config.get("environment", {}).items():
             os.environ[key] = value
 
-        os.environ["API_URL"] = self.inference_url
-
         # Install dependencies if specified
         dependencies = self.config.get("dependencies", [])
         if dependencies:
@@ -87,12 +86,14 @@ class WebAppServer:
         # Load web app configuration
         # Determine web server type (defaults to Flask)
         web_server = self.config.get("web_server", "flask")
-        port = self.config.get("port", 8080)
 
         try:
+
+            os.environ["API_URL"] = self.inference_url
+
             if web_server.lower() == "flask":
                 app_module = self.config.get("app_module", "app:app")
-                cmd = ["gunicorn", "-b", f"0.0.0.0:{port}", app_module]
+                cmd = ["gunicorn", "-b", f"0.0.0.0:{self.port}", app_module]
 
                 # Start the server as a subprocess
                 self.logger.info(f"Executing: {' '.join(cmd)}")
@@ -103,13 +104,13 @@ class WebAppServer:
                     stderr=subprocess.PIPE,
                 )
 
-                self.logger.info(f"Web Application Server started on port {port}")
+                self.logger.info(f"Web Application Server started on port {self.port}")
                 return proc.pid
 
             elif web_server.lower() == "streamlit":
                 app_file = self.config.get("app_file", "app.py")
                 app_path = os.path.join(self.app_dir, app_file)
-                cmd = ["streamlit", "run", app_path, "--server.port", str(port)]
+                cmd = ["streamlit", "run", app_path, "--server.port", str(self.port)]
 
                 # Start the server as a subprocess
                 self.logger.info(f"Executing: {' '.join(cmd)}")
@@ -118,7 +119,7 @@ class WebAppServer:
                 )
 
                 self.logger.info(
-                    f"Streamlit Web Application Server started on port {port}"
+                    f"Streamlit Web Application Server started on port {self.port}"
                 )
                 return proc.pid
 
