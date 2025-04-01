@@ -5,7 +5,7 @@ import logging
 
 
 class InferenceAPIServer:
-    def __init__(self, app_dir):
+    def __init__(self, app_dir, model_path, port, workers):
         self.app_dir = app_dir
         self.config = self._load_config()
         self.server_name = self.__class__.__name__
@@ -14,6 +14,9 @@ class InferenceAPIServer:
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         )
         self.logger = logging.getLogger(self.server_name)
+        self.model_path = model_path
+        self.port = port
+        self.workers = workers
 
     def _verify_app_directory(self):
         """Verify that the application directory exists and has required files"""
@@ -60,14 +63,11 @@ class InferenceAPIServer:
             return -1
 
         # Set up model path and server configuration
-        model_path = os.path.join(self.app_dir, self.config.get("model_path", "model"))
         api_module = self.config.get("api_module", "api:app")
-        port = self.config.get("port", 8000)
-        workers = self.config.get("workers", 2)
 
         try:
             # Export model path as environment variable for the API
-            os.environ["MODEL_PATH"] = model_path
+            os.environ["MODEL_PATH"] = self.model_path
 
             # Start the API server with gunicorn for production or uvicorn for FastAPI
             if "fastapi" in api_module.lower():
@@ -77,17 +77,17 @@ class InferenceAPIServer:
                     "--host",
                     "0.0.0.0",
                     "--port",
-                    str(port),
+                    str(self.port),
                     "--workers",
-                    str(workers),
+                    str(self.workers),
                 ]
             else:
                 cmd = [
                     "gunicorn",
                     "-b",
-                    f"0.0.0.0:{port}",
+                    f"0.0.0.0:{self.port}",
                     "-w",
-                    str(workers),
+                    str(self.workers),
                     api_module,
                 ]
 
@@ -97,7 +97,7 @@ class InferenceAPIServer:
                 cmd, cwd=self.app_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE
             )
 
-            self.logger.info(f"Inference API Server started on port {port}")
+            self.logger.info(f"Inference API Server started on port {self.port}")
             return proc.pid
 
         except Exception as e:

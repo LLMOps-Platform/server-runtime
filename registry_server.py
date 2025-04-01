@@ -55,6 +55,16 @@ class RegistryServer:
 
         try:
             app_module = self.config.get("app_module", "app:app")
+            init = self.config.get("init_module", "app:init_db'").split(":")
+            main_file = init[0]
+            init_fn = init[1]
+            cmd = ["python", "-c", f"'import ${main_file}; ${init_fn}()"]
+            try:
+                subprocess.run(cmd, check=True)
+            except subprocess.CalledProcessError as e:
+                self.logger.error(f"Unable to call init_module: {e}")
+                return -1
+
             cmd = ["gunicorn", "-b", f"0.0.0.0:{port}", app_module]
 
             # Start the server as a subprocess
