@@ -10,7 +10,7 @@ from flask import Flask, jsonify, request
 from inference_server import InferenceAPIServer
 from webapp_server import WebAppServer
 
-REGISTRY_URL = "localhost:5001"
+REGISTRY_URL = "localhost:5002"
 REPOSITORY_URL = "localhost:5001"
 
 logging.basicConfig(
@@ -22,9 +22,9 @@ logger = logging.getLogger("agent")
 
 def run_inference_server(name, version, port, workers):
     try:
-        dir = requests.get(f"${REPOSITORY_URL}/get_version_files/${name}/${version}")
+        dir = requests.get(f"{REPOSITORY_URL}/get_version_files/{name}/{version}")
     except requests.RequestException as e:
-        logger.error(f"Could not get files: ${e}")
+        logger.error(f"Could not get files: {e}")
         return
 
     data = json.loads(dir.json())
@@ -33,7 +33,7 @@ def run_inference_server(name, version, port, workers):
     model_nfs_path = data["model"]
 
     # Copy files from NFS share to local directories
-    app_dir = f"${name}_${version}"
+    app_dir = f"{name}_{version}"
 
     os.makedirs(app_dir, exist_ok=True)
     model_path = os.path.join(app_dir, "model.pt")
@@ -44,20 +44,20 @@ def run_inference_server(name, version, port, workers):
     server = InferenceAPIServer(app_dir, model_path, port, workers)
     pid = server.start()
     if pid == -1:
-        logger.error(f"Could not start inference server: ${name}:${version}")
+        logger.error(f"Could not start inference server: {name}:{version}")
         return
     data = {name: name, version: version, pid: pid, port: port}
     try:
         response = requests.post(
-            f"${REGISTRY_URL}/register_application", json=json.dumps(data)
+            f"{REGISTRY_URL}/register_application", json=json.dumps(data)
         )
         if response.status_code == 200:
             logger.info("Registered application succesfully")
         else:
-            logger.error(f"Application registration failed: ${response.json()}")
+            logger.error(f"Application registration failed: {response.json()}")
             stop_service(pid)
     except requests.RequestException as e:
-        logger.error(f"Failed to register application: ${e}")
+        logger.error(f"Failed to register application: {e}")
         stop_service(pid)
 
 
@@ -81,9 +81,9 @@ def get_application_url(name, version):
 
 def run_webapp_server(name, version, port):
     try:
-        dir = requests.get(f"${REPOSITORY_URL}/get_version_files/${name}/${version}")
+        dir = requests.get(f"{REPOSITORY_URL}/get_version_files/{name}/{version}")
     except requests.RequestException as e:
-        logger.error(f"Could not get files: ${e}")
+        logger.error(f"Could not get files: {e}")
         return
 
     # TODO: adjust accordingly later
@@ -92,7 +92,7 @@ def run_webapp_server(name, version, port):
     webapp_nfs_path = os.path.join(app_nfs_path, "webapp")
 
     # Copy files from NFS share to local directories
-    app_dir = f"${name}_${version}"
+    app_dir = f"{name}_{version}"
 
     os.makedirs(app_dir, exist_ok=True)
 
@@ -107,10 +107,10 @@ def run_webapp_server(name, version, port):
         if response.status_code == 200:
             logger.info("Registered application succesfully")
         else:
-            logger.error(f"Application registration failed: ${response.json()}")
+            logger.error(f"Application registration failed: {response.json()}")
             stop_service(pid)
     except requests.RequestException as e:
-        logger.error(f"Failed to register application: ${e}")
+        logger.error(f"Failed to register application: {e}")
         stop_service(pid)
 
 
@@ -120,7 +120,7 @@ def stop_service(pid):
         subprocess.run(cmd, check=True)
         logger.info(f"Process with pid ${pid} succesfully stoped")
     except subprocess.CalledProcessError:
-        logger.info(f"Could not found process with pid ${pid}")
+        logger.info(f"Could not found process with pid {pid}")
 
 
 app = Flask(__name__)
